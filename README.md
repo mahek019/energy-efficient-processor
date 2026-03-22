@@ -58,7 +58,7 @@ Button PRESSED  →  HIGH PERFORMANCE MODE
  
 
 ## Live Interactive Presentation
-[Click here to view the animation](https://mahek019.github.io/COA-Energy-Efficient-Processor/energy_efficient_processor_COA.html)
+[Click here to view the animation](https://mahek019.github.io/energy-efficient-processor/)
 
 ## Key Learning Outcomes
  
