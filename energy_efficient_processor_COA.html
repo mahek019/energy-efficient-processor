@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Energy-Efficient Processor Design – XR COA Demonstration</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0a1a;color:#e8e8f0;overflow-x:hidden}
+.slide{display:none;min-height:100vh;padding:40px 48px;animation:fadeIn .5s ease}
+.slide.active{display:flex;flex-direction:column;justify-content:center}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(10,10,26,.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;padding:10px 24px}
+.nav-title{font-size:13px;color:rgba(255,255,255,.5);letter-spacing:.5px}
+.nav-dots{display:flex;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2);cursor:pointer;transition:all .3s}
+.dot.active{background:#7f77dd;transform:scale(1.3)}
+.nav-btns{display:flex;gap:8px}
+.nav-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#e8e8f0;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;transition:background .2s}
+.nav-btn:hover{background:rgba(255,255,255,.14)}
+.nav-btn:disabled{opacity:.3;cursor:not-allowed}
+
+/* SLIDE 1 – TITLE */
+.s1-bg{background:radial-gradient(ellipse at 60% 40%,rgba(127,119,221,.18) 0%,transparent 70%),linear-gradient(135deg,#0a0a1a 0%,#0e0e2a 100%)}
+.s1-tag{display:inline-block;background:rgba(127,119,221,.2);border:1px solid rgba(127,119,221,.4);color:#afa9ec;padding:4px 14px;border-radius:20px;font-size:12px;margin-bottom:20px;letter-spacing:.8px}
+.s1-title{font-size:clamp(28px,5vw,52px);font-weight:700;line-height:1.15;margin-bottom:12px}
+.s1-title span{color:#7f77dd}
+.s1-sub{font-size:16px;color:rgba(255,255,255,.5);margin-bottom:36px}
+.pill-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:40px}
+.pill{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);padding:6px 14px;border-radius:20px;font-size:13px;color:rgba(255,255,255,.7)}
+.cpu-art{position:absolute;right:6%;top:50%;transform:translateY(-50%);opacity:.18;pointer-events:none}
+.info-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;max-width:600px}
+.info-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 16px}
+.info-card .label{font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.info-card .val{font-size:14px;font-weight:500;color:#e8e8f0}
+
+/* HEADINGS */
+.slide-badge{display:inline-block;background:rgba(127,119,221,.15);border:1px solid rgba(127,119,221,.3);color:#afa9ec;padding:3px 12px;border-radius:12px;font-size:11px;letter-spacing:.7px;margin-bottom:10px}
+h2{font-size:clamp(22px,4vw,36px);font-weight:700;margin-bottom:6px;line-height:1.2}
+h2 span{color:#7f77dd}
+.subtitle{font-size:14px;color:rgba(255,255,255,.45);margin-bottom:28px}
+
+/* SLIDE 2 – POWER vs PERF */
+.formula-box{background:rgba(127,119,221,.1);border:1px solid rgba(127,119,221,.25);border-radius:12px;padding:16px 22px;margin-bottom:24px;display:inline-block}
+.formula{font-size:clamp(16px,3vw,24px);font-weight:600;color:#afa9ec;letter-spacing:1px}
+.formula sub{font-size:.7em}
+.tradeoff-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.tradeoff-card{border-radius:12px;padding:18px;border:1px solid}
+.tc-perf{background:rgba(29,158,117,.1);border-color:rgba(29,158,117,.3)}
+.tc-power{background:rgba(216,90,48,.1);border-color:rgba(216,90,48,.3)}
+.tc-title{font-size:13px;font-weight:600;margin-bottom:8px}
+.tc-perf .tc-title{color:#5dcaa5}
+.tc-power .tc-title{color:#f0997b}
+.tc-point{font-size:12px;color:rgba(255,255,255,.6);margin-bottom:4px;padding-left:10px;position:relative}
+.tc-point::before{content:'›';position:absolute;left:0;color:rgba(255,255,255,.3)}
+
+/* SLIDE 3 – DVFS */
+.dvfs-demo{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:24px;margin-bottom:20px}
+.core-visual{display:flex;gap:20px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+.core-chip{width:120px;height:120px;border-radius:12px;border:2px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:all .4s;flex-shrink:0}
+.chip-label{font-size:11px;font-weight:600;letter-spacing:.5px}
+.chip-val{font-size:22px;font-weight:700}
+.chip-unit{font-size:11px;opacity:.6}
+.dvfs-sliders{flex:1;min-width:200px}
+.sl-row{margin-bottom:16px}
+.sl-label{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:6px;display:flex;justify-content:space-between}
+.sl-label span{color:#e8e8f0;font-weight:500}
+input[type=range]{width:100%;accent-color:#7f77dd;cursor:pointer}
+.power-meter{height:14px;background:rgba(255,255,255,.08);border-radius:7px;overflow:hidden;margin-top:8px}
+.power-fill{height:100%;border-radius:7px;transition:width .4s,background .4s}
+.power-stat{font-size:12px;margin-top:6px;color:rgba(255,255,255,.5)}
+.power-stat span{font-weight:600}
+.dvfs-explain{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.de-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px;font-size:12px;color:rgba(255,255,255,.6);line-height:1.5}
+.de-card strong{display:block;font-size:13px;color:#e8e8f0;margin-bottom:4px}
+
+/* SLIDE 4 – BIG.LITTLE */
+.bl-container{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:20px;margin-bottom:20px}
+.bl-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.bl-title{font-size:14px;font-weight:600;color:rgba(255,255,255,.7)}
+.workload-btns{display:flex;gap:8px;flex-wrap:wrap}
+.wl-btn{padding:6px 14px;border-radius:20px;border:1px solid;font-size:12px;cursor:pointer;transition:all .25s}
+.wl-btn.active{color:#0a0a1a;font-weight:600}
+.cores-row{display:flex;gap:12px;flex-wrap:wrap}
+.core-group{flex:1;min-width:200px;background:rgba(255,255,255,.04);border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,.07)}
+.cg-label{font-size:11px;font-weight:600;letter-spacing:.7px;margin-bottom:10px}
+.cores-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.core-box{height:52px;border-radius:8px;border:1px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .35s;font-size:10px;font-weight:500}
+.core-box .cname{font-size:9px;opacity:.6;margin-top:2px}
+.bl-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:16px}
+.bl-stat{text-align:center;background:rgba(255,255,255,.04);border-radius:10px;padding:12px 8px}
+.bl-stat .sv{font-size:20px;font-weight:700;transition:color .4s}
+.bl-stat .sk{font-size:11px;color:rgba(255,255,255,.45);margin-top:2px}
+.workload-desc{background:rgba(127,119,221,.08);border:1px solid rgba(127,119,221,.2);border-radius:10px;padding:12px 16px;font-size:13px;color:rgba(255,255,255,.65);line-height:1.5;margin-bottom:16px}
+.scheduler-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(255,255,255,.04);border-radius:10px;padding:12px 16px;margin-bottom:16px}
+.sched-label{font-size:12px;color:rgba(255,255,255,.5)}
+.sched-badge{font-size:12px;font-weight:600;padding:4px 12px;border-radius:12px;background:rgba(127,119,221,.2);border:1px solid rgba(127,119,221,.3);color:#afa9ec}
+
+/* SLIDE 5 – REAL WORLD */
+.rw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
+.rw-card{border-radius:14px;padding:18px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04)}
+.rw-icon{font-size:28px;margin-bottom:10px}
+.rw-name{font-size:14px;font-weight:600;margin-bottom:4px}
+.rw-detail{font-size:12px;color:rgba(255,255,255,.5);line-height:1.5}
+.comparison-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px}
+.comparison-table th{background:rgba(127,119,221,.15);color:#afa9ec;padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.5px}
+.comparison-table td{padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.75)}
+.comparison-table tr:last-child td{border-bottom:none}
+.tag-good{background:rgba(29,158,117,.15);color:#5dcaa5;padding:2px 8px;border-radius:10px;font-size:11px}
+.tag-bad{background:rgba(216,90,48,.15);color:#f0997b;padding:2px 8px;border-radius:10px;font-size:11px}
+.tag-mid{background:rgba(186,117,23,.15);color:#fac775;padding:2px 8px;border-radius:10px;font-size:11px}
+
+/* SLIDE 6 – SUMMARY */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
+.sum-card{border-radius:14px;padding:20px;border:1px solid}
+.sc1{background:rgba(127,119,221,.08);border-color:rgba(127,119,221,.25)}
+.sc2{background:rgba(29,158,117,.08);border-color:rgba(29,158,117,.25)}
+.sc3{background:rgba(216,90,48,.08);border-color:rgba(216,90,48,.25)}
+.sum-num{font-size:32px;font-weight:700;line-height:1}
+.sc1 .sum-num{color:#7f77dd}
+.sc2 .sum-num{color:#1d9e75}
+.sc3 .sum-num{color:#d85a30}
+.sum-title{font-size:14px;font-weight:600;margin:6px 0 4px}
+.sum-desc{font-size:12px;color:rgba(255,255,255,.5);line-height:1.5}
+.key-formula{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+.kf-pill{background:rgba(127,119,221,.12);border:1px solid rgba(127,119,221,.25);border-radius:8px;padding:8px 14px;font-size:13px;color:#afa9ec}
+.outro{background:rgba(127,119,221,.08);border-left:3px solid #7f77dd;border-radius:0 10px 10px 0;padding:14px 18px;font-size:13px;color:rgba(255,255,255,.65);line-height:1.6}
+
+/* CHART WRAPPER */
+.chart-wrap{position:relative;width:100%;height:240px;margin-bottom:20px}
+
+/* RESPONSIVE */
+@media(max-width:600px){
+  .slide{padding:20px 18px}
+  .tradeoff-grid,.cores-row{grid-template-columns:1fr}
+  .cpu-art{display:none}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-title">XR COA – Energy-Efficient Processor Design</span>
+  <div class="nav-dots" id="navDots"></div>
+  <div class="nav-btns">
+    <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">&#8592; Prev</button>
+    <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next &#8594;</button>
+  </div>
+</nav>
+
+<!-- SLIDE 1: TITLE -->
+<div class="slide s1-bg active" id="slide-0">
+  <svg class="cpu-art" width="340" height="340" viewBox="0 0 340 340">
+    <rect x="60" y="60" width="220" height="220" rx="20" fill="none" stroke="#7f77dd" stroke-width="2"/>
+    <rect x="90" y="90" width="160" height="160" rx="10" fill="rgba(127,119,221,.1)" stroke="#7f77dd" stroke-width="1"/>
+    <g stroke="#7f77dd" stroke-width="1.5" opacity=".7">
+      <line x1="60" y1="110" x2="20" y2="110"/><line x1="60" y1="140" x2="20" y2="140"/>
+      <line x1="60" y1="170" x2="20" y2="170"/><line x1="60" y1="200" x2="20" y2="200"/>
+      <line x1="280" y1="110" x2="320" y2="110"/><line x1="280" y1="140" x2="320" y2="140"/>
+      <line x1="280" y1="170" x2="320" y2="170"/><line x1="280" y1="200" x2="320" y2="200"/>
+      <line x1="110" y1="60" x2="110" y2="20"/><line x1="140" y1="60" x2="140" y2="20"/>
+      <line x1="170" y1="60" x2="170" y2="20"/><line x1="200" y1="60" x2="200" y2="20"/>
+      <line x1="110" y1="280" x2="110" y2="320"/><line x1="140" y1="280" x2="140" y2="320"/>
+      <line x1="170" y1="280" x2="170" y2="320"/><line x1="200" y1="280" x2="200" y2="320"/>
+    </g>
+    <rect x="115" y="115" width="110" height="110" rx="8" fill="rgba(127,119,221,.15)" stroke="#7f77dd" stroke-width="1"/>
+    <text x="170" y="162" text-anchor="middle" fill="#7f77dd" font-size="11" font-family="monospace" opacity=".8">ARM</text>
+    <text x="170" y="178" text-anchor="middle" fill="#7f77dd" font-size="11" font-family="monospace" opacity=".8">big.LITTLE</text>
+  </svg>
+
+  <div class="s1-tag">COA ASSESSMENT – TOPIC 61</div>
+  <h1 class="s1-title">Energy-Efficient<br><span>Processor Design</span></h1>
+  <p class="s1-sub">Power vs Performance · DVFS · ARM big.LITTLE Architecture</p>
+  <div class="pill-row">
+    <span class="pill">3D Animation Demonstration</span>
+    <span class="pill">Computer Organization &amp; Architecture</span>
+    <span class="pill">Outcome-Based Education</span>
+  </div>
+  <div class="info-row">
+    <div class="info-card"><div class="label">Implementation</div><div class="val">3D Animation</div></div>
+    <div class="info-card"><div class="label">Key Concept</div><div class="val">big.LITTLE SoC</div></div>
+    <div class="info-card"><div class="label">Slides</div><div class="val">6 Scenes</div></div>
+    <div class="info-card"><div class="label">Standard</div><div class="val">ARM HMP</div></div>
+  </div>
+</div>
+
+<!-- SLIDE 2: POWER vs PERFORMANCE -->
+<div class="slide" id="slide-1">
+  <div class="slide-badge">SCENE 1 — POWER vs PERFORMANCE</div>
+  <h2>The <span>trade-off</span> every processor faces</h2>
+  <p class="subtitle">Why can't processors always run at maximum speed?</p>
+
+  <div class="formula-box">
+    <div class="formula">P<sub>dynamic</sub> = C × V² × f</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.45);margin-top:6px">C = capacitance &nbsp;·&nbsp; V = voltage &nbsp;·&nbsp; f = clock frequency</div>
+  </div>
+
+  <div class="tradeoff-grid">
+    <div class="tradeoff-card tc-perf">
+      <div class="tc-title">High Performance Mode</div>
+      <div class="tc-point">Clock frequency: 3.0–5.0 GHz</div>
+      <div class="tc-point">Supply voltage: 1.0–1.2 V</div>
+      <div class="tc-point">TDP (Thermal Design Power): 45–125 W</div>
+      <div class="tc-point">Heavy workloads: gaming, rendering</div>
+      <div class="tc-point">Battery drain: fast (2–4 hrs)</div>
+    </div>
+    <div class="tradeoff-card tc-power">
+      <div class="tc-title">Power-Saving Mode</div>
+      <div class="tc-point">Clock frequency: 0.3–1.0 GHz</div>
+      <div class="tc-point">Supply voltage: 0.7–0.9 V</div>
+      <div class="tc-point">TDP: 1–5 W</div>
+      <div class="tc-point">Light workloads: browsing, calls</div>
+      <div class="tc-point">Battery life: extended (10–20 hrs)</div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <canvas id="tradeoffChart"></canvas>
+  </div>
+  <p style="font-size:12px;color:rgba(255,255,255,.35);text-align:center">Power consumption grows as square of voltage — doubling V quadruples power draw</p>
+</div>
+
+<!-- SLIDE 3: DVFS -->
+<div class="slide" id="slide-2">
+  <div class="slide-badge">SCENE 2 — DYNAMIC VOLTAGE &amp; FREQUENCY SCALING</div>
+  <h2><span>DVFS</span> — Real-time power control</h2>
+  <p class="subtitle">The OS continuously adjusts voltage and frequency based on current workload demand</p>
+
+  <div class="dvfs-demo">
+    <div class="core-visual">
+      <div class="core-chip" id="dvfsChip" style="border-color:#7f77dd;background:rgba(127,119,221,.12)">
+        <div class="chip-label" style="color:#afa9ec">PROCESSOR</div>
+        <div class="chip-val" id="dvfsFreq" style="color:#7f77dd">2.4</div>
+        <div class="chip-unit">GHz</div>
+      </div>
+      <div class="dvfs-sliders">
+        <div class="sl-row">
+          <div class="sl-label">Workload <span id="wlPct">60%</span></div>
+          <input type="range" min="0" max="100" value="60" id="wlSlider" oninput="updateDVFS(this.value)">
+        </div>
+        <div class="sl-row">
+          <div class="sl-label">Frequency <span id="freqLbl">2.4 GHz</span></div>
+          <div class="power-meter"><div class="power-fill" id="freqBar" style="width:60%;background:#7f77dd"></div></div>
+        </div>
+        <div class="sl-row">
+          <div class="sl-label">Voltage <span id="voltLbl">1.00 V</span></div>
+          <div class="power-meter"><div class="power-fill" id="voltBar" style="width:60%;background:#5dcaa5"></div></div>
+        </div>
+        <div class="sl-row">
+          <div class="sl-label">Power draw <span id="powerLbl">2.4 W</span></div>
+          <div class="power-meter"><div class="power-fill" id="powerBar" style="width:36%;background:#d85a30"></div></div>
+          <div class="power-stat">Dynamic power: <span id="powerCalc">2.40 W</span> &nbsp;|&nbsp; Saved vs max: <span id="powerSaved" style="color:#5dcaa5">57%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dvfs-explain">
+    <div class="de-card"><strong>Step 1 – Workload monitor</strong>OS scheduler monitors CPU usage every 10ms and decides if scaling is needed</div>
+    <div class="de-card"><strong>Step 2 – Frequency decision</strong>cpufreq governor (schedutil, ondemand) selects target frequency from available P-states</div>
+    <div class="de-card"><strong>Step 3 – Voltage reduction</strong>Lower frequency → voltage reduced (P = CV²f), minimizing heat &amp; battery consumption</div>
+    <div class="de-card"><strong>Step 4 – Feedback loop</strong>Process repeats continuously, trading off performance &amp; energy in microseconds</div>
+  </div>
+</div>
+
+<!-- SLIDE 4: BIG.LITTLE -->
+<div class="slide" id="slide-3">
+  <div class="slide-badge">SCENE 3 — ARM big.LITTLE ARCHITECTURE</div>
+  <h2>ARM <span>big.LITTLE</span> — Heterogeneous Multi-Processing</h2>
+  <p class="subtitle">Two types of cores on one chip — the right core for the right job</p>
+
+  <div class="workload-desc" id="wlDesc">Select a workload scenario to see which cores activate and how power is managed.</div>
+
+  <div class="bl-container">
+    <div class="bl-header">
+      <span class="bl-title">SoC Core Layout (e.g. Snapdragon 8 Gen 2)</span>
+      <div class="workload-btns">
+        <button class="wl-btn" id="wl-idle" onclick="setWorkload('idle')" style="border-color:#5dcaa5;color:#5dcaa5">Idle / standby</button>
+        <button class="wl-btn active" id="wl-browse" onclick="setWorkload('browse')" style="border-color:#7f77dd;background:rgba(127,119,221,.15);color:#afa9ec">Browsing</button>
+        <button class="wl-btn" id="wl-game" onclick="setWorkload('game')" style="border-color:#d85a30;color:#f0997b">Gaming</button>
+        <button class="wl-btn" id="wl-mixed" onclick="setWorkload('mixed')" style="border-color:#fac775;color:#fac775">Mixed</button>
+      </div>
+    </div>
+
+    <div class="cores-row">
+      <div class="core-group">
+        <div class="cg-label" style="color:#f0997b">BIG CORES (Cortex-X3 / A715)</div>
+        <div class="cores-grid" id="bigCores">
+          <div class="core-box" data-idx="0" style="border-color:rgba(216,90,48,.3);color:#f0997b;background:rgba(216,90,48,.08)">B0<span class="cname">3.2 GHz</span></div>
+          <div class="core-box" data-idx="1" style="border-color:rgba(216,90,48,.3);color:#f0997b;background:rgba(216,90,48,.08)">B1<span class="cname">3.2 GHz</span></div>
+          <div class="core-box" data-idx="2" style="border-color:rgba(216,90,48,.3);color:#f0997b;background:rgba(216,90,48,.08)">B2<span class="cname">2.8 GHz</span></div>
+          <div class="core-box" data-idx="3" style="border-color:rgba(216,90,48,.3);color:#f0997b;background:rgba(216,90,48,.08)">B3<span class="cname">2.8 GHz</span></div>
+        </div>
+      </div>
+      <div class="core-group">
+        <div class="cg-label" style="color:#5dcaa5">LITTLE CORES (Cortex-A510)</div>
+        <div class="cores-grid" id="littleCores">
+          <div class="core-box" data-idx="0" style="border-color:rgba(29,158,117,.3);color:#5dcaa5;background:rgba(29,158,117,.08)">L0<span class="cname">2.0 GHz</span></div>
+          <div class="core-box" data-idx="1" style="border-color:rgba(29,158,117,.3);color:#5dcaa5;background:rgba(29,158,117,.08)">L1<span class="cname">2.0 GHz</span></div>
+          <div class="core-box" data-idx="2" style="border-color:rgba(29,158,117,.3);color:#5dcaa5;background:rgba(29,158,117,.08)">L2<span class="cname">2.0 GHz</span></div>
+          <div class="core-box" data-idx="3" style="border-color:rgba(29,158,117,.3);color:#5dcaa5;background:rgba(29,158,117,.08)">L3<span class="cname">2.0 GHz</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scheduler-row">
+      <span class="sched-label">HMP Scheduler decision:</span>
+      <span class="sched-badge" id="schedDecision">Routing light tasks to LITTLE cores</span>
+    </div>
+
+    <div class="bl-stats">
+      <div class="bl-stat"><div class="sv" id="blPower" style="color:#d85a30">1.8 W</div><div class="sk">Power draw</div></div>
+      <div class="bl-stat"><div class="sv" id="blPerf" style="color:#7f77dd">28%</div><div class="sk">Performance used</div></div>
+      <div class="bl-stat"><div class="sv" id="blBatt" style="color:#5dcaa5">18 hrs</div><div class="sk">Est. battery life</div></div>
+      <div class="bl-stat"><div class="sv" id="blTemp" style="color:#fac775">32°C</div><div class="sk">Die temperature</div></div>
+    </div>
+  </div>
+
+  <div class="chart-wrap" style="height:180px">
+    <canvas id="blChart"></canvas>
+  </div>
+</div>
+
+<!-- SLIDE 5: REAL WORLD -->
+<div class="slide" id="slide-4">
+  <div class="slide-badge">SCENE 4 — REAL-WORLD APPLICATIONS</div>
+  <h2><span>Real chips</span> using these techniques</h2>
+  <p class="subtitle">These technologies power billions of devices worldwide today</p>
+
+  <div class="rw-grid">
+    <div class="rw-card">
+      <div class="rw-icon" style="font-size:24px;width:40px;height:40px;background:rgba(127,119,221,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#afa9ec;font-weight:700;margin-bottom:10px">ARM</div>
+      <div class="rw-name">Qualcomm Snapdragon 8 Gen 3</div>
+      <div class="rw-detail">1× Cortex-X4 (3.3 GHz) + 5× A720 (3.15 GHz) + 2× A520 (2.27 GHz). Full DVFS + big.LITTLE. Used in Galaxy S24.</div>
+    </div>
+    <div class="rw-card">
+      <div class="rw-icon" style="font-size:24px;width:40px;height:40px;background:rgba(29,158,117,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#5dcaa5;font-weight:700;margin-bottom:10px">A18</div>
+      <div class="rw-name">Apple A18 Pro (iPhone 16)</div>
+      <div class="rw-detail">2 performance cores + 4 efficiency cores. Apple's custom implementation of heterogeneous processing with 3nm TSMC node.</div>
+    </div>
+    <div class="rw-card">
+      <div class="rw-icon" style="font-size:24px;width:40px;height:40px;background:rgba(186,117,23,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fac775;font-weight:700;margin-bottom:10px">M4</div>
+      <div class="rw-name">Apple M4 (MacBook Pro)</div>
+      <div class="rw-detail">4 performance cores + 6 efficiency cores on a unified memory architecture. P-cores for bursts, E-cores for background tasks.</div>
+    </div>
+    <div class="rw-card">
+      <div class="rw-icon" style="font-size:24px;width:40px;height:40px;background:rgba(216,90,48,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#f0997b;font-weight:700;margin-bottom:10px">i9</div>
+      <div class="rw-name">Intel Core Ultra (Meteor Lake)</div>
+      <div class="rw-detail">P-cores (Performance) + E-cores (Efficiency) + LP-cores (Low Power). Intel's equivalent of big.LITTLE using Thread Director.</div>
+    </div>
+  </div>
+
+  <table class="comparison-table">
+    <thead><tr><th>Architecture</th><th>Big/P cores</th><th>Little/E cores</th><th>Max TDP</th><th>Battery efficiency</th></tr></thead>
+    <tbody>
+      <tr><td>ARM Cortex (big.LITTLE)</td><td>A710/A715 – 2.8 GHz</td><td>A510 – 2.0 GHz</td><td><span class="tag-mid">5–15 W</span></td><td><span class="tag-good">Excellent</span></td></tr>
+      <tr><td>Apple M4</td><td>4× P-cores – 4.4 GHz</td><td>6× E-cores – 2.9 GHz</td><td><span class="tag-good">3–30 W</span></td><td><span class="tag-good">Excellent</span></td></tr>
+      <tr><td>Intel Core Ultra</td><td>6× P-cores – 5.1 GHz</td><td>8× E + 2× LP</td><td><span class="tag-bad">28–125 W</span></td><td><span class="tag-mid">Good</span></td></tr>
+      <tr><td>Snapdragon 8 Gen 3</td><td>1× X4 + 5× A720</td><td>2× A520</td><td><span class="tag-good">5–12 W</span></td><td><span class="tag-good">Excellent</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SLIDE 6: SUMMARY -->
+<div class="slide" id="slide-5">
+  <div class="slide-badge">SCENE 5 — SUMMARY &amp; KEY LEARNING OUTCOMES</div>
+  <h2>What we <span>learned</span></h2>
+  <p class="subtitle">Three core techniques that define modern energy-efficient processor design</p>
+
+  <div class="summary-grid">
+    <div class="sum-card sc1">
+      <div class="sum-num">01</div>
+      <div class="sum-title">Power vs Performance Trade-off</div>
+      <div class="sum-desc">Dynamic power P = CV²f shows that power grows quadratically with voltage. Every processor must balance performance demand against thermal and power budgets.</div>
+    </div>
+    <div class="sum-card sc2">
+      <div class="sum-num">02</div>
+      <div class="sum-title">Dynamic Voltage &amp; Frequency Scaling</div>
+      <div class="sum-desc">DVFS allows the OS to reduce clock speed and supply voltage during light workloads, significantly cutting power without noticeable performance loss.</div>
+    </div>
+    <div class="sum-card sc3">
+      <div class="sum-num">03</div>
+      <div class="sum-title">ARM big.LITTLE Architecture</div>
+      <div class="sum-desc">Pairing high-performance "big" cores with power-efficient "LITTLE" cores on one die allows the HMP scheduler to route tasks optimally for energy efficiency.</div>
+    </div>
+  </div>
+
+  <div class="key-formula">
+    <div class="kf-pill">P = C × V² × f (dynamic power)</div>
+    <div class="kf-pill">DVFS: lower V → P ∝ V²</div>
+    <div class="kf-pill">HMP: right task → right core</div>
+    <div class="kf-pill">TDP = thermal design power limit</div>
+  </div>
+
+  <div class="chart-wrap" style="height:180px;margin-bottom:16px">
+    <canvas id="summaryChart"></canvas>
+  </div>
+
+  <div class="outro">
+    <strong style="color:#e8e8f0">Conclusion:</strong> Modern SoCs like the Snapdragon 8 Gen 3 combine all three techniques — DVFS on each core cluster, big.LITTLE heterogeneous processing, and intelligent OS scheduling — to deliver desktop-class performance in a 5W power envelope. This is why today's smartphones can last 20+ hours while also running high-fidelity games.
+  </div>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+let current = 0;
+let chartsInit = {};
+
+const navDots = document.getElementById('navDots');
+slides.forEach((_,i)=>{
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===0?' active':'');
+  d.onclick = ()=>goTo(i);
+  navDots.appendChild(d);
+});
+
+function goTo(n){
+  slides[current].classList.remove('active');
+  navDots.children[current].classList.remove('active');
+  current = Math.max(0,Math.min(slides.length-1,n));
+  slides[current].classList.add('active');
+  navDots.children[current].classList.add('active');
+  document.getElementById('prevBtn').disabled = current===0;
+  document.getElementById('nextBtn').disabled = current===slides.length-1;
+  initSlideChart(current);
+}
+function changeSlide(d){ goTo(current+d); }
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown') changeSlide(1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp') changeSlide(-1);
+});
+document.getElementById('prevBtn').disabled = true;
+
+/* DVFS INTERACTION */
+function updateDVFS(wl){
+  wl = parseInt(wl);
+  const maxF=4.0, minF=0.3;
+  const maxV=1.2, minV=0.7;
+  const f = +(minF + (maxF-minF)*wl/100).toFixed(1);
+  const v = +(minV + (maxV-minV)*wl/100).toFixed(2);
+  const c = 1.0;
+  const p = +(c * v * v * f).toFixed(2);
+  const pMax = c * maxV * maxV * maxF;
+  const saved = Math.round((1 - p/pMax)*100);
+
+  document.getElementById('wlPct').textContent = wl+'%';
+  document.getElementById('freqLbl').textContent = f+' GHz';
+  document.getElementById('voltLbl').textContent = v+' V';
+  document.getElementById('powerLbl').textContent = p+' W';
+  document.getElementById('dvfsFreq').textContent = f;
+  document.getElementById('powerCalc').textContent = p+' W';
+  document.getElementById('powerSaved').textContent = saved+'%';
+
+  document.getElementById('freqBar').style.width = (wl)+'%';
+  document.getElementById('voltBar').style.width = (wl)+'%';
+  document.getElementById('powerBar').style.width = Math.round(p/pMax*100)+'%';
+
+  const chip = document.getElementById('dvfsChip');
+  const hue = wl > 70 ? '#d85a30' : wl > 40 ? '#7f77dd' : '#5dcaa5';
+  chip.style.borderColor = hue;
+  chip.style.background = wl>70?'rgba(216,90,48,.12)':wl>40?'rgba(127,119,221,.12)':'rgba(29,158,117,.12)';
+  document.getElementById('dvfsFreq').style.color = hue;
+}
+
+/* BIG.LITTLE WORKLOADS */
+const workloads = {
+  idle:{
+    desc:'Device is idle or in standby. The HMP scheduler parks all big cores and runs only 1–2 LITTLE cores at lowest frequency to handle background tasks like email sync.',
+    big:[0,0,0,0], little:[1,0,0,0],
+    power:'0.4 W', perf:'5%', batt:'42 hrs', temp:'28°C',
+    sched:'Parking big cores. 1 LITTLE core active at 400 MHz.'
+  },
+  browse:{
+    desc:'Light browsing, social media, music playback. LITTLE cores handle most tasks. Big cores may wake briefly for page rendering then sleep immediately.',
+    big:[0,0,0,0], little:[1,1,1,0],
+    power:'1.8 W', perf:'28%', batt:'18 hrs', temp:'32°C',
+    sched:'Routing light tasks to LITTLE cores'
+  },
+  game:{
+    desc:'Gaming or video rendering. Full chip engaged — all big cores running at peak frequency for maximum performance. LITTLE cores assist with background tasks.',
+    big:[1,1,1,1], little:[1,1,1,1],
+    power:'8.5 W', perf:'95%', batt:'3.5 hrs', temp:'68°C',
+    sched:'All cores active. big cores at peak for compute-heavy threads.'
+  },
+  mixed:{
+    desc:'Mixed workload: foreground app (game or video call) uses big cores; background tasks (cloud sync, notifications) routed to LITTLE cores.',
+    big:[1,1,0,0], little:[1,1,1,1],
+    power:'4.2 W', perf:'55%', batt:'8 hrs', temp:'48°C',
+    sched:'Big cores for foreground. LITTLE for background tasks.'
+  }
+};
+
+function setWorkload(id){
+  const w = workloads[id];
+  document.getElementById('wlDesc').textContent = w.desc;
+  document.getElementById('schedDecision').textContent = w.sched;
+  document.getElementById('blPower').textContent = w.power;
+  document.getElementById('blPerf').textContent = w.perf;
+  document.getElementById('blBatt').textContent = w.batt;
+  document.getElementById('blTemp').textContent = w.temp;
+
+  document.querySelectorAll('.wl-btn').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById('wl-'+id);
+  btn.classList.add('active');
+  btn.style.background = id==='idle'?'rgba(29,158,117,.15)':id==='browse'?'rgba(127,119,221,.15)':id==='game'?'rgba(216,90,48,.15)':'rgba(186,117,23,.15)';
+
+  const bigBoxes = document.querySelectorAll('#bigCores .core-box');
+  w.big.forEach((on,i)=>{
+    bigBoxes[i].style.background = on?'rgba(216,90,48,.35)':'rgba(216,90,48,.08)';
+    bigBoxes[i].style.borderColor = on?'#d85a30':'rgba(216,90,48,.3)';
+    bigBoxes[i].style.boxShadow = on?'0 0 8px rgba(216,90,48,.3)':'none';
+  });
+  const litBoxes = document.querySelectorAll('#littleCores .core-box');
+  w.little.forEach((on,i)=>{
+    litBoxes[i].style.background = on?'rgba(29,158,117,.35)':'rgba(29,158,117,.08)';
+    litBoxes[i].style.borderColor = on?'#1d9e75':'rgba(29,158,117,.3)';
+    litBoxes[i].style.boxShadow = on?'0 0 8px rgba(29,158,117,.3)':'none';
+  });
+
+  const perfN = parseInt(w.perf);
+  document.getElementById('blPerf').style.color = perfN>70?'#d85a30':perfN>40?'#7f77dd':'#5dcaa5';
+  document.getElementById('blTemp').style.color = parseInt(w.temp)>55?'#d85a30':'#fac775';
+}
+
+/* CHART INIT */
+function initSlideChart(idx){
+  if(chartsInit[idx]) return;
+  chartsInit[idx]=true;
+
+  const dark='rgba(255,255,255,.07)';
+  const gridColor='rgba(255,255,255,.06)';
+  const textColor='rgba(255,255,255,.5)';
+  Chart.defaults.color = textColor;
+
+  if(idx===1){
+    new Chart(document.getElementById('tradeoffChart'),{
+      type:'bar',
+      data:{
+        labels:['0.5 GHz','1.0 GHz','1.5 GHz','2.0 GHz','2.5 GHz','3.0 GHz','3.5 GHz','4.0 GHz'],
+        datasets:[
+          {label:'Power (W)',data:[0.2,0.5,1.0,1.9,3.2,5.0,7.5,10.8],backgroundColor:'rgba(216,90,48,.7)',borderRadius:4,order:2},
+          {label:'Performance score',data:[12,22,34,48,64,80,90,98],type:'line',borderColor:'#7f77dd',backgroundColor:'transparent',pointBackgroundColor:'#7f77dd',tension:.4,yAxisID:'y2',order:1}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:gridColor},ticks:{font:{size:11}}},
+          y:{grid:{color:gridColor},ticks:{callback:v=>v+'W',font:{size:11}},title:{display:true,text:'Power (W)',color:textColor,font:{size:11}}},
+          y2:{position:'right',grid:{display:false},ticks:{callback:v=>v,font:{size:11}},title:{display:true,text:'Perf. score',color:textColor,font:{size:11}},max:120}
+        }
+      }
+    });
+    document.getElementById('tradeoffChart').parentNode.insertAdjacentHTML('afterend',
+      '<div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:rgba(255,255,255,.45)">'+
+      '<span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(216,90,48,.7);display:inline-block"></span>Power draw (W)</span>'+
+      '<span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;background:#7f77dd;display:inline-block"></span>Performance score</span></div>');
+  }
+
+  if(idx===3){
+    new Chart(document.getElementById('blChart'),{
+      type:'bar',
+      data:{
+        labels:['Idle','Browsing','Mixed','Gaming'],
+        datasets:[
+          {label:'Power (W)',data:[0.4,1.8,4.2,8.5],backgroundColor:['#1d9e75','#7f77dd','#ba7517','#d85a30'],borderRadius:6}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        indexAxis:'y',
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:gridColor},ticks:{callback:v=>v+'W',font:{size:11}}},
+          y:{grid:{display:false},ticks:{font:{size:11}}}
+        }
+      }
+    });
+  }
+
+  if(idx===5){
+    new Chart(document.getElementById('summaryChart'),{
+      type:'bar',
+      data:{
+        labels:['Always max (no DVFS)','DVFS only','big.LITTLE only','DVFS + big.LITTLE'],
+        datasets:[
+          {label:'Avg power (W)',data:[10.8,4.5,3.2,1.8],backgroundColor:['#d85a30','#ba7517','#7f77dd','#1d9e75'],borderRadius:6}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' W avg'}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:11}}},
+          y:{grid:{color:gridColor},ticks:{callback:v=>v+'W',font:{size:11}},title:{display:true,text:'Average power consumption',color:textColor,font:{size:11}}}
+        }
+      }
+    });
+  }
+}
+
+setWorkload('browse');
+initSlideChart(0);
+</script>
+</body>
+</html>
